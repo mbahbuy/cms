@@ -7,6 +7,7 @@ use App\Models\Post;
 use Illuminate\Http\Request;
 use \Cviebrock\EloquentSluggable\Services\SlugService;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 
 class DashboardController extends Controller
 {
@@ -53,7 +54,7 @@ class DashboardController extends Controller
         if($request->file('image'))
         {
             $validatedData['image'] = $request->file('image')->store('post-image');
-        }
+        };
 
         $validatedData['user_id'] = auth()->user()->id;
         $validatedData['excerpt'] = Str::limit(strip_tags($request->body), 100);
@@ -103,6 +104,7 @@ class DashboardController extends Controller
         $rules = [
             'title' => 'required|max:255',
             'category_id' => 'required',
+            'image' => 'image|file|max:1024',
             'body' => 'required'
         ];
 
@@ -110,9 +112,16 @@ class DashboardController extends Controller
         {
             $rules['slug'] = 'required|unique:posts';
         };
-
+        
         $validatedData = $request->validate($rules);
-
+        
+        if($request->file('image'))
+        {
+            if($request->oldImage){
+                Storage::delete($request->oldImage);
+            };
+            $validatedData['image'] = $request->file('image')->store('post-image');
+        };
         
         $validatedData['user_id'] = auth()->user()->id;
         $validatedData['excerpt'] = Str::limit(strip_tags($request->body), 100);
@@ -132,6 +141,9 @@ class DashboardController extends Controller
      */
     public function destroy(Post $post)
     {
+        if($post->image){
+            Storage::delete($post->image);
+        };
         Post::destroy($post->id);
 
         return redirect('/dashboard/posts')->with('success', 'The post has been deleted!!!');
